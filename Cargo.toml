@@ -1,0 +1,14 @@
+[package]
+name = "tile-masker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.5.1"
+actix-web-prom = "0.8.0"
+anyhow = "1.0.82"
+clap = { version = "4.5.4", features = ["env", "derive"] }
+image = "0.25.1"
+serde = { version = "1.0.198", features = ["derive"] }
+tracing = { version = "0.1.40", features = ["log"] }
+tracing-subscriber = { version = "0.3.18", default-features = false, features = ["fmt"] }
