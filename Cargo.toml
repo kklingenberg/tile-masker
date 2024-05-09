@@ -1,6 +1,6 @@
 [package]
 name = "tile-masker"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -12,3 +12,5 @@ image = "0.25.1"
 serde = { version = "1.0.198", features = ["derive"] }
 tracing = { version = "0.1.40", features = ["log"] }
 tracing-subscriber = { version = "0.3.18", default-features = false, features = ["fmt"] }
+ureq = "2.9.7"
+url = "2.5.0"

@@ -21,3 +21,14 @@ The above query would mask the colours `#ff0000` and `#00ff00` from the original
 file and produce a new PNG file with those pixels replaced with transparent
 pixels. If the `mask` parameter is omitted or empty no masking is done on the
 file.
+
+It's also possible to proxy files from another host, using the `--base-url` or
+`-b` option instead of `-v`. For example, given a PNG-file serving host
+`https://some.other/host/`:
+
+```bash
+docker run --rm -d -p 10000:10000 plotter/tile-masker -b https://some.other/host/
+```
+
+Then fetch a file from <http://localhost:10000/some/path/to/file.png>, which is
+fetched by tile-masker from <https://some.other/host/some/path/to/file.png>.
