@@ -3,7 +3,7 @@ use image::{
     io::Reader as ImageReader,
     ImageFormat, Pixel, RgbaImage,
 };
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::io::{Cursor, Error, ErrorKind, Read};
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -12,15 +12,18 @@ use ureq::{Agent, AgentBuilder};
 use url::Url;
 
 /// Generate a masked image according to the given mask.
-fn mask_image(img: &mut RgbaImage, mask: BTreeSet<u32>) -> Result<Vec<u8>, Error> {
+fn mask_image(
+    img: &mut RgbaImage,
+    mask: BTreeMap<u32, (u8, u8, u8, u8)>,
+) -> Result<Vec<u8>, Error> {
     for pixel in img.pixels_mut() {
         let data = pixel.channels_mut();
         let color = ((data[0] as u32) << 16) + ((data[1] as u32) << 8) + (data[2] as u32);
-        if mask.contains(&color) {
-            data[0] = 0;
-            data[1] = 0;
-            data[2] = 0;
-            data[3] = 0;
+        if let Some((r, g, b, a)) = mask.get(&color) {
+            data[0] = *r;
+            data[1] = *g;
+            data[2] = *b;
+            data[3] = *a;
         }
     }
     let mut bytes: Vec<u8> = Vec::new();
@@ -41,7 +44,7 @@ const MAX_REMOTE_FILE_SIZE: u64 = 10_485_760; // 10 MB
 
 /// Process a remote file, masking any color found in the given mask
 /// with transparency.
-pub fn process_remote(url: Url, mask: BTreeSet<u32>) -> Result<Vec<u8>, Error> {
+pub fn process_remote(url: Url, mask: BTreeMap<u32, (u8, u8, u8, u8)>) -> Result<Vec<u8>, Error> {
     let agent = AGENT.get_or_init(|| {
         AgentBuilder::new()
             .timeout(Duration::from_secs(30))
@@ -68,7 +71,10 @@ pub fn process_remote(url: Url, mask: BTreeSet<u32>) -> Result<Vec<u8>, Error> {
 
 /// Process a local file, masking any color found in the given mask
 /// with transparency.
-pub fn process_local(file: PathBuf, mask: BTreeSet<u32>) -> Result<Vec<u8>, Error> {
+pub fn process_local(
+    file: PathBuf,
+    mask: BTreeMap<u32, (u8, u8, u8, u8)>,
+) -> Result<Vec<u8>, Error> {
     let mut img = ImageReader::open(file)?
         .decode()
         .map_err(|e| Error::new(ErrorKind::InvalidData, e))?

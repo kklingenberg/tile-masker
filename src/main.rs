@@ -9,7 +9,7 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use anyhow::{bail, Result};
 use clap::Parser;
 use serde::Deserialize;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::{fs, fs::DirEntry};
@@ -43,8 +43,9 @@ struct MaskQuery {
 }
 
 impl MaskQuery {
-    /// Parses this query into a set of u32 colors.
-    fn clean(&self) -> BTreeSet<u32> {
+    /// Parses this query into a mapping of u32 colors to 4-tuples of
+    /// u8 (R, G, B, alpha).
+    fn clean(&self) -> BTreeMap<u32, (u8, u8, u8, u8)> {
         self.mask
             .clone()
             .unwrap_or_default()
@@ -52,7 +53,19 @@ impl MaskQuery {
             .split(',')
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
-            .filter_map(|s| u32::from_str_radix(s, 16).ok())
+            .filter_map(|s| {
+                let mut it = s.split('-');
+                let source = u32::from_str_radix(it.next()?, 16).ok()?;
+                if let Some(raw_target) = it.next() {
+                    let target = u32::from_str_radix(raw_target, 16).ok()?;
+                    let r = ((target >> 16) & 0xff) as u8;
+                    let g = ((target >> 8) & 0xff) as u8;
+                    let b = (target & 0xff) as u8;
+                    Some((source, (r, g, b, 255)))
+                } else {
+                    Some((source, (0, 0, 0, 0)))
+                }
+            })
             .collect()
     }
 }
