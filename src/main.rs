@@ -87,7 +87,7 @@ async fn mask_remote(
     .await??;
     Ok(HttpResponse::Ok()
         .content_type(ContentType::png())
-        .insert_header(("Cache-Control", "public, max-age=31536000"))
+        .insert_header(("Cache-Control", "public, max-age=43200"))
         .body(body))
 }
 
@@ -115,7 +115,7 @@ async fn mask_local(
         .await??;
         Ok(HttpResponse::Ok()
             .content_type(ContentType::png())
-            .insert_header(("Cache-Control", "public, max-age=31536000"))
+            .insert_header(("Cache-Control", "public, max-age=43200"))
             .body(body))
     }
 }
