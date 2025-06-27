@@ -1,15 +1,17 @@
 mod masker;
 
 use actix_web::{
+    App, HttpResponse, HttpServer, Result as ActixResult,
     error::InternalError,
-    http::{header::ContentType, StatusCode},
-    web, App, HttpResponse, HttpServer, Result as ActixResult,
+    http::{StatusCode, header::ContentType},
+    web,
 };
 use actix_web_prom::PrometheusMetricsBuilder;
-use anyhow::{bail, Result};
+use anyhow::{Result, anyhow, bail};
+use bloomfilter::Bloom;
 use clap::Parser;
 use serde::Deserialize;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::{fs, fs::DirEntry};
@@ -31,6 +33,10 @@ struct Cli {
     /// Volume to serve png files from.
     #[arg(short, long, env)]
     volume: Option<PathBuf>,
+
+    /// Aproximate number of files in the volume
+    #[arg(long, env, default_value_t = 3000000)]
+    volume_size: usize,
 
     /// Log level
     #[arg(long, env, default_value_t = tracing::Level::INFO)]
@@ -94,12 +100,12 @@ async fn mask_remote(
 /// Mask the given file fetched from disk
 async fn mask_local(
     volume: web::Data<PathBuf>,
-    snapshot: web::Data<BTreeSet<PathBuf>>,
+    snapshot: web::Data<Bloom<PathBuf>>,
     path: web::Path<String>,
     query: web::Query<MaskQuery>,
 ) -> ActixResult<HttpResponse> {
     let filepath = volume.join(format!("{}.png", path.as_str()));
-    if !snapshot.contains(&filepath) {
+    if !snapshot.check(&filepath) {
         Ok(HttpResponse::NotFound()
             .content_type(ContentType::plaintext())
             .body("file not found"))
@@ -154,14 +160,14 @@ async fn main() -> Result<()> {
         bail!("Only one of --base-url or --volume must be provided");
     }
 
-    let mut snapshot = BTreeSet::new();
+    let mut snapshot = Bloom::new_for_fp_rate(cli.volume_size, 0.001).map_err(|e| anyhow!(e))?;
     if let Some(v) = &cli.volume {
         visit_dirs(v, &mut |entry: &DirEntry| {
             if matches!(
                 entry.path().extension().and_then(|e| e.to_str()),
                 Some("png")
             ) {
-                snapshot.insert(entry.path().to_path_buf());
+                snapshot.set(&entry.path());
             }
         })?;
     }
