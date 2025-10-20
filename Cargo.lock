@@ -1835,7 +1835,7 @@ dependencies = [
 
 [[package]]
 name = "tile-masker"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "actix-web",
  "actix-web-prom",

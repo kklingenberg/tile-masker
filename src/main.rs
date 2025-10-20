@@ -177,7 +177,10 @@ async fn main() -> Result<()> {
         .unwrap();
     info!("Listening at port {0}", cli.port);
     HttpServer::new(move || {
-        let base_app = App::new().wrap(prometheus.clone());
+        let base_app = App::new().wrap(prometheus.clone()).route(
+            "/health",
+            web::get().to(|| async { HttpResponse::new(StatusCode::NO_CONTENT) }),
+        );
         if cli.base_url.is_some() {
             base_app
                 .app_data(web::Data::new(cli.base_url.clone().unwrap()))
